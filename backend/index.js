@@ -28,6 +28,7 @@ const systemPrompt= {
 // Route for LLM generation
 app.post('/generate', async (req, res) => {
   try {
+
     const { messages, chatbot } = req.body;
 
     if (!messages || !chatbot) {
@@ -54,7 +55,7 @@ app.post('/generate', async (req, res) => {
 
     const embedding = embeddingResponse.data.data[0].embedding;
 
-    // Step 3: Query top 5 from Pinecone
+    // Step 3: Query top 7 from Pinecone
     const body = {
       vector: embedding,
       topK: 7,
@@ -63,20 +64,17 @@ app.post('/generate', async (req, res) => {
     };
 
     const topKResults = await getTopKResults(body, chatbot);
-    // console.log(topKResults)
-    // Step 4: Use the top results to generate a response using OpenAI's LLM
-    // const context = topKResults.matches.map(match => match.id).join(', ');
     let context ="This is the Context : ";
     topKResults.matches.forEach(match => {
       context += match.metadata.values + " ";
     })
-
+  
     const completionResponse = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
         model: 'gpt-4o',
         messages: [
-            { role: 'system', content: systemPrompt[chatbot] },
+            { role: 'system', content: (systemPrompt[chatbot]+context) },
           ...messages
           
         ],
